@@ -7,53 +7,94 @@ function App() {
   const [audioFile, setAudioFile] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const waveformRef = useRef(null); // Ref for WaveSurfer container
-  const wavesurfer = useRef(null); // Ref for WaveSurfer instance
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
 
-  // Initialize WaveSurfer when component mounts
+  const waveformRef = useRef(null);
+  const wavesurfer = useRef(null);
+  const chunks = useRef([]);
+
   useEffect(() => {
-    // Create WaveSurfer instance
     wavesurfer.current = WaveSurfer.create({
       container: waveformRef.current,
-      waveColor: '#4CAF50', // Green waveform
-      progressColor: '#2196F3', // Blue progress color
-      height: 100, // Waveform height in pixels
-      barWidth: 2, // Width of waveform bars
-      responsive: true, // Adjusts to container size
+      waveColor: '#4CAF50',
+      progressColor: '#2196F3',
+      height: 100,
+      barWidth: 2,
+      responsive: true,
     });
 
-    // Cleanup on component unmount
+    wavesurfer.current.on('play', () => setIsPlaying(true));
+    wavesurfer.current.on('pause', () => setIsPlaying(false));
+    wavesurfer.current.on('finish', () => setIsPlaying(false));
+
     return () => {
-      if (wavesurfer.current) {
-        wavesurfer.current.destroy();
-      }
+      wavesurfer.current.destroy();
     };
   }, []);
 
-  // Handle file upload and load into WaveSurfer
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     setAudioFile(file);
-    setResult(null); // Clear previous results
-    setError(null); // Clear previous errors
+    setResult(null);
+    setError(null);
+    setIsPlaying(false);
 
-    // Load audio into WaveSurfer
     if (file) {
       const audioUrl = URL.createObjectURL(file);
       wavesurfer.current.load(audioUrl);
-      // Revoke URL after loading to free memory
       wavesurfer.current.on('ready', () => {
         URL.revokeObjectURL(audioUrl);
       });
     } else {
-      wavesurfer.current.empty(); // Clear waveform if no file is selected
+      wavesurfer.current.empty();
     }
   };
 
-  // Handle audio classification
+  const togglePlayPause = () => {
+    if (wavesurfer.current) {
+      wavesurfer.current.playPause();
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+        setMediaRecorder(recorder);
+        chunks.current = [];
+
+        recorder.ondataavailable = (e) => chunks.current.push(e.data);
+
+        recorder.onstop = () => {
+          const blob = new Blob(chunks.current, { type: 'audio/webm' });
+          const file = new File([blob], 'recorded_audio.webm', { type: 'audio/webm' });
+          setAudioFile(file);
+
+          const audioUrl = URL.createObjectURL(blob);
+          wavesurfer.current.load(audioUrl);
+          wavesurfer.current.on('ready', () => {
+            URL.revokeObjectURL(audioUrl);
+          });
+        };
+
+        recorder.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error('Recording error:', err);
+        setError('Microphone access denied or not supported.');
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     if (!audioFile) {
-      setError('Please select an audio file');
+      setError('Please select or record an audio file');
       return;
     }
 
@@ -75,15 +116,30 @@ function App() {
   return (
     <div className="App">
       <h1>Environmental Sound Classifier</h1>
+
       <input type="file" accept="audio/*" onChange={handleFileChange} />
-      <div ref={waveformRef} style={{ width: '100%', margin: '20px 0' }} />
-      <button onClick={handleSubmit}>Classify Audio</button>
+
+      <button onClick={toggleRecording}>
+        {isRecording ? 'Stop Recording' : 'Record Audio'}
+      </button>
+
+      <div ref={waveformRef} className="waveform-container" />
+
+      <button onClick={togglePlayPause} disabled={!audioFile}>
+        {isPlaying ? 'Pause' : 'Play'}
+      </button>
+
+      <button onClick={handleSubmit} disabled={!audioFile}>
+        Classify Audio
+      </button>
+
       {result && (
         <div>
           <h3>Result: {result.prediction}</h3>
           <p>Confidence: {(result.confidence * 100).toFixed(2)}%</p>
         </div>
       )}
+
       {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   );

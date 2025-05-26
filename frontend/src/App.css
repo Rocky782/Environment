@@ -3,27 +3,56 @@
   padding: 20px;
   max-width: 800px;
   margin: 0 auto;
-}
-
-button {
-  margin: 10px;
-  padding: 10px 20px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #45a049;
-}
-
-input[type="file"] {
-  margin: 20px 0;
+  font-family: Arial, sans-serif;
 }
 
 .waveform-container {
   width: 100%;
   margin: 20px 0;
+  border: 1px solid #ddd;
+  padding: 10px;
+}
+
+.button-container {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.play-pause-button {
+  background-color: #2196F3;
+  color: white;
+}
+
+.play-pause-button:disabled {
+  background-color: #b0c4de;
+  cursor: not-allowed;
+}
+
+.play-pause-button:hover:not(:disabled) {
+  background-color: #1976D2;
+}
+
+.classify-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.classify-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.classify-button:hover:not(:disabled) {
+  background-color: #45a049;
 }
