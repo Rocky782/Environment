@@ -7,9 +7,9 @@ import sys
 
 # Paths to the models
 MODEL_PATHS = {
-    'LSTM': 'D:/PROJECT11/backend/gru20.h5',
+    'LSTM': 'D:/PROJECT11/backend/bilstm_urbansound8k_model.h5',
     'BiLSTM': 'D:/PROJECT11/backend/bilstm_urbansound8k_model100.h5',
-    'CNN': 'D:/PROJECT11/backend/lstm20.h5'
+    'CNN': 'D:/PROJECT11/backend/bilstm20.h5'
 }
 
 # Class labels
@@ -61,7 +61,7 @@ def predict_with_model(model_path, model_name, input_data):
 
 # Entry point
 if __name__ == '__main__':
-    audio_path = 'D:/PROJECT11/audio/fold1/203440-3-0-6.wav'
+    audio_path = 'D:/PROJECT11/audio/fold2/203929-7-9-12.wav'
     input_data = preprocess_audio(audio_path)
 
     if input_data is not None:

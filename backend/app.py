@@ -10,7 +10,11 @@ import uuid
 app = Flask(__name__)
 CORS(app)
 
-model = tf.keras.models.load_model('bilstm_urbansound8k_model100.h5')
+# Load all four models
+model_lstm = tf.keras.models.load_model('lstm_urbansound8k_model100.h5')
+model_bilstm = tf.keras.models.load_model('bilstm_model100.h5')
+model_gru = tf.keras.models.load_model('gru20.h5')
+model_cnn = tf.keras.models.load_model('cnn_urbansound8k_model20.h5')
 
 class_labels = ['air_conditioner', 'car_horn', 'children_playing', 'dog_bark',
                 'drilling', 'engine_idling', 'gun_shot', 'jackhammer',
@@ -41,7 +45,6 @@ def preprocess_audio(audio_file_path):
             mfcc = np.pad(mfcc, ((0, target_time_steps - mfcc.shape[0]), (0, 0)), mode='constant')
 
         input_data = np.expand_dims(mfcc, axis=0)
-
         os.remove(temp_wav)
         return input_data
     except Exception as e:
@@ -58,19 +61,30 @@ def classify_audio():
     file_ext = audio_file.filename.split('.')[-1].lower()
 
     try:
-        # Use a unique filename to avoid conflicts
         temp_input_path = f'temp_input_{uuid.uuid4()}.{file_ext}'
         audio_file.save(temp_input_path)
 
-        # Preprocess and predict
         input_data = preprocess_audio(temp_input_path)
-        prediction = model.predict(input_data, verbose=0)
-        class_idx = np.argmax(prediction, axis=1)[0]
-        confidence = float(prediction[0][class_idx])
-        result = class_labels[class_idx]
+
+        # Predict using all 4 models
+        predictions = {
+            'LSTM': model_lstm.predict(input_data, verbose=0),
+            'BiLSTM': model_bilstm.predict(input_data, verbose=0),
+            'GRU': model_gru.predict(input_data, verbose=0),
+            'CNN': model_cnn.predict(input_data, verbose=0),
+        }
+
+        results = {}
+        for model_name, pred in predictions.items():
+            class_idx = np.argmax(pred, axis=1)[0]
+            results[model_name] = {
+                'prediction': class_labels[class_idx],
+                'confidence': float(pred[0][class_idx])
+            }
 
         os.remove(temp_input_path)
-        return jsonify({'prediction': result, 'confidence': confidence})
+        return jsonify(results)
+
     except Exception as e:
         if os.path.exists(temp_input_path):
             os.remove(temp_input_path)
